@@ -34,7 +34,8 @@ if args.results_dir is not None:
 
     results_dir=args.results_dir
     results_path = Path(results_dir)
-    all_fixed_files = list(results_path.glob("**/sub-*stat-effect_statmap.nii.gz"))
+    all_fixed_files = list(results_path.glob("**/"
+                                             "sub-*stat-effect_statmap.nii.gz"))
 
 elif args.list_of_files is not None:
 

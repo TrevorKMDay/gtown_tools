@@ -15,7 +15,7 @@ files_split(cellfun("isempty", files_split)) = [];
 files_split_char = char(files_split) ;
 
 n_files = size(files_split_char) ;
-disp(strcat("[call_LI] I was given ", n_files, " files.")) 
+disp(strcat("[call_LI] I was given ", string(n_files), " files.")) 
 
 % overwrite = 0     don't do anything if output file exists
 %           = 1     delete output file and start over

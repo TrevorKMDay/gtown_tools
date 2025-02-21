@@ -17,7 +17,7 @@ if [ "${n_files}" -eq 0 ] ; then
     exit 1
 fi
 
-if [ -e ${output_tsv} ] ; then 
+if [ -e "${output_tsv}" ] ; then 
 
     echo "Output file ${output_tsv} already exists, not overwriting!"
     exit 1
