@@ -1,0 +1,69 @@
+# task_analysis.py
+
+This is a wrapper for a series of nilearn commands that perform
+a first-level GLM, based on the Nilearn commands `first_level_from_bids()` and
+`save_glm_to_bids()`.
+
+Example script:
+
+    # BIDS directory
+    bids=~/Projects/kLat/bids/
+
+    # fMRIPREP output directory
+    derivs=/Volumes/thufir/kLat_fmriprep/
+
+    # Space to use
+    space="MNI152NLin2009cAsym"
+
+    # Task info
+    task="FPW"
+    cfile="fpw_contrasts.json"
+
+    # Output directory - here 6 motion parameters, SPM HRF, high pass filter
+    out_dir="nilearnout_06p_spm_hp2"
+
+    # Where the code is stored
+    code=~/code/nilearn/
+
+    # shellcheck disable=SC2086
+    python ${code}/task_analysis.py \
+        --strategy  motion scrub high_pass      \
+        --motion    basic                       \
+        --fd        0.9                         \
+        ${bids} ${derivs}                       \
+        ${task}                                 \
+        ${space}                                \
+        ${cfile}                                \
+        ${out_dir}
+
+## Options
+
+`--strategy` lets you select motion cleaning strategies from Nilearn's list.
+    Choose from: `["motion", "wm_csf", "global_signal", "compcor", "ica_aroma", "scrub", "high_pass"]`.
+
+`--motion` let's you pick from the motion parameters, including `basic`,
+    `derivatives`, `power2` and `all`.
+
+`--fd` set FD threshold, 0.9 mm is a common (if generous) threshold for task.
+
+## Space
+
+Should probably be a flag, not a positional argument; `MNI152NLin2009cAsym` is
+the default, but we are using pediatric scans, so investigating the pediatric
+template.
+
+## Contrasts
+
+An example contrast file looks like this, using stimuls types from
+`*_events.tsv`. `"t"` is the type of test. You need to explicity define
+every contrast, including over rest (e.g. the first three).
+
+    {
+        "faces": "t",
+        "places": "t",
+        "words": "t",
+        "words - places": "t",
+        "words - places - faces": "t",
+        "faces - places": "t",
+        "faces - places - words": "t"
+    }
