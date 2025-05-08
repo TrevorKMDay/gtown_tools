@@ -1,3 +1,5 @@
 **/.R*
 
-workbench/
+external/
+
+.DS_Store

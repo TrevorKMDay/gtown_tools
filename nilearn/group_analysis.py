@@ -15,20 +15,36 @@ parser = ap.ArgumentParser()
 
 input_args = parser.add_mutually_exclusive_group(required=True)
 
-input_args.add_argument("--list_of_files", "-f", metavar="FILE", nargs='+',
-                        help="List of fixed-effect files to use "
-                             "('stat-effect_statmap'). "
-                             "Sets task label to 'task-all'.")
+parser.add_argument("--list_of_files", "-f", metavar="FILE", nargs='+',
+                    help="List of fixed-effect files to use "
+                         "('stat-effect_statmap'). "
+                         "Sets task label to 'task-all'.")
 
 input_args.add_argument("--results_dir", "-d", type=str, metavar="DIR",
-                        help="Directory with fixed-effects results. If set, "
-                             "uses all 'stat-effect_statmap' files.")
+                        help="Directory with fixed-effects (first-level) "
+                             "results. If set, uses all 'stat-effect_statmap' "
+                             "files.")
 
 parser.add_argument("--collapse_tasks", action="store_true",
                     default=False,
                     help="Combine all tasks into one?")
 
+
+parser.add_argument("--list_of_subs", "-s", metavar="SUB", nargs="+",
+                        help="List of subjects to run all contrasts for. "
+                             "Format: LABEL SUB1 [SUB2 ...]")
+
 args = parser.parse_args()
+
+if args.list_of_subs is not None:
+    group_label = args.list_of_subs[0]
+    subs = args.list_of_subs[1::]
+    subs.sort()
+else:
+    group_label = None
+    subs  = None
+
+# Check input arguments ====
 
 if args.results_dir is not None:
 
@@ -43,7 +59,7 @@ elif args.list_of_files is not None:
 
 # Define function =====
 
-def run_secondlevel(fixed_files, task, con):
+def run_secondlevel(fixed_files, task, con, group=None):
 
     n_maps = len(fixed_files)
     print(f" Found {n_maps} files for task {task}, contrast {con}")
@@ -52,15 +68,20 @@ def run_secondlevel(fixed_files, task, con):
 
     slm = SecondLevelModel(minimize_memory=False)
 
-    slm.fit(second_level_input=[nib.load(x) for x in fixed_files], 
+    slm.fit(second_level_input=[nib.load(x) for x in fixed_files],
                                 design_matrix=design_matrix)
-    
+
+    if group is not None:
+        group_str = f"_group-{group}"
+    else:
+        group_str = ""
+
     save_glm_to_bids(
         slm,
         contrasts="Intercept",
         contrast_types={"Intercept": "t"},
         out_dir=f"{results_dir}",
-        prefix=f"task-{task}_contrast-{con}",
+        prefix=f"task-{task}_contrast-{con}{group_str}",
      )
 
 # Main loop =====
@@ -77,7 +98,7 @@ tasks = list(set([re.search('task-[^_]*', i.stem).group(0).replace("task-", "")
 print(f"Tasks: {tasks}")
 print(f"Contrasts: {contrasts}")
 
-if len(tasks) > 1 and args.collapse_tasks: 
+if len(tasks) > 1 and args.collapse_tasks:
 
     print(f"I found {len(tasks)} tasks, but collapsing them all")
 
@@ -96,5 +117,23 @@ else:
 
             effect_maps_glob = f"**/sub-*_task-{task}_contrast-{con}_stat-effect_statmap.nii.gz"
             fixed_files = list(results_path.glob(effect_maps_glob))
+            fixed_files.sort()
 
-            run_secondlevel(fixed_files=fixed_files, task=task, con=con)
+            if subs is not None:
+
+                # pp.pprint(fixed_files)
+                # pp.pprint(subs)
+                n_orig = len(fixed_files)
+
+                fixed_files = [x for x in fixed_files
+                               if re.search("sub-[^_/]*", str(x)).group(0)
+                               in subs]
+
+                # for x in fixed_files:
+                #     print(re.search("sub-[^_/]*", str(x)).group(0))
+
+                print(f"Reduced list of files from {n_orig} to "
+                      f"{len(fixed_files)}")
+
+            run_secondlevel(fixed_files=fixed_files, task=task, con=con,
+                            group=group_label)

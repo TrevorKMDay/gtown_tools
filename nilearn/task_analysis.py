@@ -54,8 +54,6 @@ parser.add_argument("derivatives_dir", type=str,
                     help="fMRIPREP outputs directory.")
 parser.add_argument("task",
                     help="Name of task to process, without 'task-'.")
-parser.add_argument("space",
-                    help="Name of output space to work in, without 'space-'.")
 parser.add_argument("contrast_file",
                     help="JSON file with contrasts listed.")
 parser.add_argument("out_dir", type=str,
@@ -68,16 +66,28 @@ input = parser.add_mutually_exclusive_group()
 input.add_argument("--subs", "-s", nargs="+",
                    help="Subs to analyze. Without 'sub-'.")
 
-input.add_argument("--include", "-i", metavar="FILE",
+input.add_argument("--include", "-i", metavar="FILE", nargs=2,
                    help="JSON file with which runs per sub to include.")
 
+input.add_argument("--fmriprep_only", "-f", action="store_true",
+                   help="Use only subs with fMRIPREP output for selected"
+                        "task and space.")
+
 # Other options
+
+parser.add_argument("--skip", nargs="+",
+                    help="Skip these participants.")
+
+parser.add_argument("--space", default="MNI152NLin2009cAsym",
+                    help="Name of output space to work in, without 'space-'.")
 
 parser.add_argument("--overwrite", "-o", action="store_true",
                     help="Overwrite results if they exist?")
 
 parser.add_argument("--test", "-1", action="store_true",
                     help="Only run one participant, as a test.")
+
+parser.add_argument("--stop-on-failure", action="store_true")
 
 model_settings = parser.add_argument_group("Model Settings")
 
@@ -130,23 +140,83 @@ args = parser.parse_args()
 
 # Main loop =====
 
+# Give CLI args better names
 bids_dataset = args.bids_dir
+derivatives_folder = args.derivatives_dir
 task_label = args.task
+space_label = args.space
+failstop = args.stop_on_failure
+
+inclusion_file = args.include[0]
+inclusion_min = int(args.include[1])
+
+contrasts_file = args.contrast_file
+out_dir = args.out_dir
+
+hrf_deriv = args.hrf_deriv
+hrf_disp = args.hrf_disp
 
 # Read in JSON if given
 
-if args.include is not None:
+def any_runs_of_x(sub, task, n=1):
 
-    with open(args.include, 'r') as f:
+    tasks = sub["tasks"]
+    task_names = [x["task"] for x in tasks]
+
+    task_ = f"task-{task}"
+    if task_ not in task_names:
+        return(False)
+
+    runs = [x["runs"] for x in tasks if x["task"] == task_]
+    included = [not x["exclude"] for x in runs[0]]
+    n_included = sum(included)
+
+    if n_included >= n:
+        return(True)
+    else:
+        return(False)
+
+if inclusion_file is not None:
+
+    # with open(inclusion_file, 'r') as f:
+    #     include1 = json.load(f)
+    #     include = include1["motion"]
+
+    # sub_labels = [x["sub"].replace("sub-", "") for x in include if
+    #                   task_label in x["task"]]
+
+    # Get list of subj
+    with open(inclusion_file, "r") as f:
         include1 = json.load(f)
-        include = include1["motion"]
 
-    sub_labels = [x["sub"].replace("sub-", "") for x in include if
-                      task_label in x["task"]]
+    all_subs = [x["sub"] for x in include1]
+    subs_with_task = [x["sub"] for x in include1 if
+                      any_runs_of_x(x, task=task_label, n=inclusion_min)]
 
+    print(f"Dropped {len(all_subs) - len(subs_with_task)} participants"
+          f"without task-{task_label} (or insufficient low-motion runs).")
+
+    include = [x for x in include1 if x["sub"] in subs_with_task]
+
+    sub_labels = [x.replace("sub-", "") for x in subs_with_task]
     sub_labels.sort()
 
+elif args.fmriprep_only:
+
+    the_glob = os.path.join(derivatives_folder, "sub-*", "func",
+                            f"*_task-{task_label}_*_space-{space_label}"
+                             "_desc-preproc_bold.nii.gz")
+
+    # Get matching files; extract subs with matching files
+    matching_files = glob.glob(the_glob)
+    task_files = [os.path.basename(x) for x in matching_files]
+    subs_with_task = set([re.search("sub-[^_]*", x).group(0)
+                          for x in task_files])
+
+    sub_labels = [x.replace("sub-", "") for x in subs_with_task]
+
 elif args.subs is not None:
+
     sub_labels = args.subs
 
 elif args.subs is None:
@@ -157,17 +227,10 @@ elif args.subs is None:
 
 # quit()
 
-print(f"Using subs: ")
-pp.pprint(sub_labels, compact=True)
+sub_labels.sort()
 
-# Give CLI args better names
-derivatives_folder = args.derivatives_dir
-space_label = args.space
-contrasts_file = args.contrast_file
-out_dir = args.out_dir
-
-hrf_deriv = args.hrf_deriv
-hrf_disp = args.hrf_disp
+if args.skip is not None:
+    sub_labels = [x for x in sub_labels if x not in args.skip]
 
 # Check arguments
 
@@ -253,54 +316,53 @@ else:
         print("Settings OK!\n")
 
 pp.pprint(settings)
+print()
 
-if args.include is not None:
+if inclusion_file is not None:
 
     print()
     print("Creating temporary directories to exclude runs ...")
 
     bids_dir = tf.TemporaryDirectory(delete = False, suffix="_bids")
-    bids_dir_name = bids_dir.name
+    bids_temp = bids_dir.name
 
     derivs_dir = tf.TemporaryDirectory(delete = False, suffix="_derivs")
-    derivs_dir_name = derivs_dir.name
+    derivs_temp = derivs_dir.name
 
-    print(f"BIDS: {bids_dir_name}\nDerivatives: {derivs_dir_name}")
+    print(f"BIDS: {bids_dataset}\nDerivatives: {derivatives_folder}\n")
 
-    for sub_row in include:
+    for subtaskruns in include:
 
-        sub = sub_row["sub"]
-        task = sub_row["task"]
-        runs = sub_row["runs"]
+        sub = subtaskruns["sub"]
 
-        if sub.replace("sub-", "") not in sub_labels or \
-                task != f"task-{task_label}":
-            continue
+        runs = [x["runs"] for x in subtaskruns["tasks"]
+                if x["task"] == f"task-{task_label}"]
 
-        print(sub_row)
+        runs_to_use = [x["run"] for x in runs[0] if not x["exclude"]]
 
-        bids_dest = Path(bids_dir_name) / sub / "func"
-        derivs_dest = Path(derivs_dir_name) / sub / "func"
+        bids_dest = Path(bids_temp) / sub / "func"
+        derivs_dest = Path(derivs_temp) / sub / "func"
 
+        print(f"{sub} {task_label} {runs_to_use}")
         [os.makedirs(x) for x in [bids_dest, derivs_dest]]
 
-        for run in runs:
+        for run in runs_to_use:
 
             # Only need event files from BIDS
             bfiles = glob.glob(f"{bids_dataset}/{sub}/func/"
-                               f"{sub}_{task}_{run}*_events.tsv")
+                               f"{sub}_task-{task_label}_{run}*_events.tsv")
 
             # Copy relevant files from derivative - this could probably
             #   be pared down to save space/copy time, but it's pretty fast
             #   as-is.
             dfiles = glob.glob(f"{derivatives_folder}/{sub}/func/"
-                               f"{sub}_{task}_{run}_*")
+                               f"{sub}_task-{task_label}_{run}_*")
 
             [copy(x, derivs_dest) for x in dfiles]
             [copy(x, bids_dest) for x in bfiles]
 
-    bids_dataset = bids_dir_name
-    derivatives_folder = derivs_dir_name
+    bids_dataset = bids_dir.name
+    derivatives_folder = derivs_dir.name
 
 # CREATE MODELS
 
@@ -413,7 +475,24 @@ for subject, model, imgs, event, confound in zip(
             print(f"Design matrix is {n_frames}x{n_confounds}")
             print(f"    {n_confounds} should be < {n_frames}")
 
-        m = model.fit(imgs, events=event, confounds=confound)
+        try:
+
+            m = model.fit(imgs, events=event, confounds=confound)
+
+        except ValueError:
+
+            total = len(event)
+            for i, x in enumerate(event):
+
+                print(f"Event table {i + 1}/{total}")
+                print(event[i])
+
+                print(f"Confounds table {i + 1}/{total}")
+                print(confound[i])
+
+            if not failstop:
+                print(f"Continuing past ValueError for {subject} ... ")
+                continue
 
         save_glm_to_bids(
             m,
@@ -427,5 +506,5 @@ for subject, model, imgs, event, confound in zip(
 
     # break
 
-if args.include is not None:
+if inclusion_file is not None:
     [x.cleanup() for x in [bids_dir, derivs_dir]]

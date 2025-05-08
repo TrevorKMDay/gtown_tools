@@ -7,7 +7,7 @@ args <- commandArgs(trailingOnly = TRUE)
 
 fmriprep <- args[1]
 
-settings <- tibble(fd_thresh = as.numeric(args[2]), 
+settings <- tibble(fd_thresh = as.numeric(args[2]),
                    fd_pct = as.numeric(args[3]),
                    datetime = now())
 
@@ -36,7 +36,7 @@ confounds2 <- confounds %>%
     exclude = pct_FD_outlier > settings$fd_pct[1]
   ) %>%
   separate_wider_delim(bn, delim = "_", names = c("sub", "task", "run", NA, NA),
-                        cols_remove = FALSE) 
+                        cols_remove = FALSE)
 
 # Save table of values
 confounds2 %>%
@@ -66,7 +66,7 @@ ggplot(confounds2, aes(x = mean_FD, fill = task)) +
 
 dev.off()
 
-png(paste0(out, "/pct_FD_outlier.png"), width = 400, height = 300, 
+png(paste0(out, "/pct_FD_outlier.png"), width = 400, height = 300,
     units = "px")
 
 ggplot(confounds2, aes(x = pct_FD_outlier, fill = task)) +
@@ -77,10 +77,10 @@ ggplot(confounds2, aes(x = pct_FD_outlier, fill = task)) +
   facet_wrap(vars(task)) +
   labs(x = "% FD outlier", fill = "# frames")
 
-dev.off() 
+dev.off()
 
 
-png(paste0(out, "/FD_scatterplot.png"), width = 400, height = 300, 
+png(paste0(out, "/FD_scatterplot.png"), width = 400, height = 300,
     units = "px")
 
 ggplot(confounds2, aes(x = pct_FD_outlier, y = mean_FD, color = task)) +
@@ -93,7 +93,7 @@ ggplot(confounds2, aes(x = pct_FD_outlier, y = mean_FD, color = task)) +
 
 dev.off()
 
-png(paste0(out, "/FD_boxplot.png"), width = 400, height = 300, 
+png(paste0(out, "/FD_boxplot.png"), width = 400, height = 300,
     units = "px")
 
 ggplot(confounds2, aes(x = task, y = pct_FD_outlier, fill = task)) +
@@ -126,7 +126,7 @@ confounds2 %>%
   group_by(task) %>%
   summarize(
     n = n(),
-    excluded = sum(exclude), 
+    excluded = sum(exclude),
     mean_FD = mean(mean_FD),
     pct_FD_outlier = mean(pct_FD_outlier)
   ) %>%
@@ -160,18 +160,29 @@ runs_to_keep <- confounds2 %>%
   ) %>%
   arrange(sub, task)
 
+runs_to_exclude <- confounds2 %>%
+  filter(
+    exclude
+  ) %>%
+  select(-exclude) %>%
+  group_by(sub, task) %>%
+  reframe(
+    runs = list(run)
+  ) %>%
+  arrange(sub, task)
+
 # Summary statistics
 
 confounds_fd <- confounds2 %>%
   filter(
     pct_FD_outlier <= 0.2
-  ) 
+  )
 
 mean_surv_fd <- weighted.mean(confounds_fd$mean_FD, confounds_fd$n_frames)
 sd_surv_fd <- Hmisc::wtd.var(confounds_fd$mean_FD, confounds_fd$n_frames) %>%
   sqrt()
 
-message(paste0("Mean surviving FD (all scans): ", 
+message(paste0("Mean surviving FD (all scans): ",
                round(mean_surv_fd, 3), " ",
                "(", round(sd_surv_fd, 3), ")"))
 
@@ -180,3 +191,7 @@ message(paste0("Mean surviving FD (all scans): ",
 list("settings" = settings, "motion" = runs_to_keep) %>%
   toJSON(pretty = TRUE) %>%
   write_lines(paste0(out, "/included_runs.json"))
+
+list("settings" = settings, "motion" = runs_to_exclude) %>%
+  toJSON(pretty = TRUE) %>%
+  write_lines(paste0(out, "/excluded_runs.json"))
