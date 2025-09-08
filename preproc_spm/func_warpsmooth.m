@@ -3,7 +3,6 @@ function func_warpsmooth(home, sub, func, warptype, smoothing)
 
 % maxNumCompThreads(1) ;
 
-addpath('~/Documents/MATLAB/spm12') ;
 
 % SPMwarp, SPMCFMwarp, ANTSwarp (for warps whose folders are named that
 % way), 'useThis' or some other label marking the folders with the best

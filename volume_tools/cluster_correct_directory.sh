@@ -117,7 +117,7 @@ for errorts in ${errorts_files} ; do
 
     done
 
-    break
+    # break
 
 done
 

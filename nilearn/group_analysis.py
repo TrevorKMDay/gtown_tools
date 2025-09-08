@@ -29,7 +29,6 @@ parser.add_argument("--collapse_tasks", action="store_true",
                     default=False,
                     help="Combine all tasks into one?")
 
-
 parser.add_argument("--list_of_subs", "-s", metavar="SUB", nargs="+",
                         help="List of subjects to run all contrasts for. "
                              "Format: LABEL SUB1 [SUB2 ...]")
@@ -59,10 +58,10 @@ elif args.list_of_files is not None:
 
 # Define function =====
 
-def run_secondlevel(fixed_files, task, con, group=None):
+def run_secondlevel(fixed_files, task, contrast, group=None):
 
     n_maps = len(fixed_files)
-    print(f" Found {n_maps} files for task {task}, contrast {con}")
+    print(f" Found {n_maps} files for task {task}, contrast {contrast}")
 
     design_matrix = pd.DataFrame([1] * n_maps, columns=['Intercept'])
 
@@ -81,7 +80,7 @@ def run_secondlevel(fixed_files, task, con, group=None):
         contrasts="Intercept",
         contrast_types={"Intercept": "t"},
         out_dir=f"{results_dir}",
-        prefix=f"task-{task}_contrast-{con}{group_str}",
+        prefix=f"task-{task}_contrast-{contrast}{group_str}",
      )
 
 # Main loop =====
@@ -135,5 +134,7 @@ else:
                 print(f"Reduced list of files from {n_orig} to "
                       f"{len(fixed_files)}")
 
-            run_secondlevel(fixed_files=fixed_files, task=task, con=con,
+            pp.pprint(fixed_files)
+
+            run_secondlevel(fixed_files=fixed_files, task=task, contrast=con,
                             group=group_label)
