@@ -6,11 +6,25 @@ inputs <- str_subset(inputs1, ".*[.]tsv")
 # Check that at least one TSV file was supplied
 stopifnot(length(inputs) > 0)
 
-rewrite <- function(input) {
+extract_fields <- function(filenames) {
 
-  message(input)
+  fields <- str_extract_all(filenames, "[^_]*-", simplify = TRUE) %>%
+    as.vector() %>%
+    unique() %>%
+    str_remove("-$")
 
-  data0 <- read_delim(input, "\t", show_col_types = FALSE)
+  n_fields <- length(fields)
+
+  message(paste("Found", n_fields, "fields:", paste(fields, collapse = " ")))
+
+  return(fields)
+
+}
+
+rewrite <- function(data0, fields = NA) {
+
+  # message(input)
+  # data0 <- read_delim(input, "\t", show_col_types = FALSE)
 
   # Extract failed image and ROI from error string
   errors <- data0 %>%
@@ -52,6 +66,24 @@ rewrite <- function(input) {
   result <- bind_rows(new_data, errors) %>%
     arrange(input_image)
 
+  if (!is.na(fields)) {
+
+    message("Extracting fields from input_image")
+
+    for (f in fields) {
+
+      keys <- str_extract(result$input_image, paste0(f, "-[^_]*")) %>%
+        str_remove(paste0(f, "-"))
+
+      result[, f] <- keys
+
+    }
+
+    result <- result %>%
+      select(all_of(fields), everything(), -input_image)
+
+  }
+
   output_file <- str_replace(input, ".tsv", "-reformatted.csv")
   message(output_file)
 
@@ -61,4 +93,11 @@ rewrite <- function(input) {
 
 }
 
-for (i in inputs) { rewrite(i) }
+for (i in inputs) {
+
+  tsv <- read_tsv(input, show_col_types = FALSE)
+  fields <- extract_fields(tsv$`Input image`)
+
+  rewrite(tsv, fields)
+
+}
