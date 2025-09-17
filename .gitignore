@@ -3,3 +3,9 @@
 external/
 
 .DS_Store
+
+# too big
+*.nii.gz
+
+templates/templateflow
+templates/tpl-*/
