@@ -1,4 +1,4 @@
-function call_LI(files, roi, thr1, output_file, overwrite)
+function call_LI(files, roi, thr1, output_file, overwrite, spm)
 
 % This sets default values
 arguments
@@ -7,6 +7,7 @@ arguments
     thr1
     output_file
     overwrite = 0
+    spm = '/Users/tkmd/Documents/MATLAB/spm12'
 end
 
 % File input ====
@@ -15,7 +16,7 @@ files_split(cellfun("isempty", files_split)) = [];
 files_split_char = char(files_split) ;
 
 n_files = size(files_split_char) ;
-disp(strcat("[call_LI] I was given ", string(n_files), " files.")) 
+disp(strcat("[call_LI] I was given ", string(n_files), " files."))
 
 % overwrite = 0     don't do anything if output file exists
 %           = 1     delete output file and start over
@@ -36,10 +37,10 @@ elseif exist(output_file, "file") && overwrite == 2
 end
 
 % add libraries
-addpath('/Users/tkmd/Documents/MATLAB/spm12');
-addpath('/Users/tkmd/Documents/MATLAB/spm12/toolbox/LI');
+addpath(spm);
+addpath(spm + '/toolbox/LI');
 
-disp(strcat("[call_LI] Using ROI: ", roi)) 
+disp(strcat("[call_LI] Using ROI: ", roi))
 
 % Thresholding ====
 % thr1    = 1 (use same threshold for all images)
