@@ -285,12 +285,12 @@ os.makedirs(out_dir, exist_ok=True)
 
 if not os.path.exists(settings_file):
 
-    with open(f"{out_dir}/settings.json", "w") as f:
+    with open(settings_file, "w") as f:
         json.dump(settings, f, indent=4)
 
 else:
 
-    with open(f"{out_dir}/settings.json", "r") as f:
+    with open(settings_file, "r") as f:
         settings_already = json.load(f)
 
     if settings != settings_already:
@@ -360,6 +360,7 @@ def copy_sub(sub, src, temp, filter):
         for run in sub_task_runnames:
 
             run_regex = re.search("run-[0-9]*", run)
+            # pp.pprint(run_regex.group(0))
 
             if run_regex:
                 run_id = run_regex.group(0)
@@ -371,18 +372,23 @@ def copy_sub(sub, src, temp, filter):
 
             # Only need event files from BIDS
             bfiles = glob.glob(f"{src[0]}/sub-{sub}/func/"
-                               f"sub-{sub}_task-{task_label}_{run_id}*_events.tsv")
-
-            # pp.pprint(f"{bids_dataset}/sub-{sub}/func/"
-            #                    f"sub-{sub}_task-{task_label}_{run}*_events.tsv")
+                               f"sub-{sub}_task-{task_label}_{run_id}"
+                               "*_events.tsv")
 
             # Copy relevant files from derivative - this could probably
             #   be pared down to save space/copy time, but it's pretty fast
             #   as-is.
-            dfiles = glob.glob(f"{src[1]}/sub-{sub}/func/"
-                               f"sub-{sub}_task-{task_label}_{run_id}_{space_label}")
+            dbolds = f"{src[1]}sub-{sub}/func/" + \
+                     f"sub-{sub}_task-{task_label}_{run_id}_{space_label}_" + \
+                     "*_bold.*"
 
-            pp.pprint(dfiles)
+            dconfounds =f"{src[1]}sub-{sub}/func/" + \
+                        f"sub-{sub}_task-{task_label}_{run_id}_" + \
+                        "desc-confounds_timeseries.tsv"
+
+            dfiles = glob.glob(dbolds) + glob.glob(dconfounds)
+
+            # pp.pprint(dfiles)
 
             [copy(x, dest[0]) for x in bfiles]
             [copy(x, dest[1]) for x in dfiles]
@@ -560,7 +566,6 @@ for subject, model, imgs, event, confound in zip(
     if type(confound) is not list:
         confound = [confound]
 
-
     for i in confound:
 
         # Check that there's not more predictors than observations (i.e.
@@ -588,6 +593,8 @@ for subject, model, imgs, event, confound in zip(
         if not fail_stop:
             print(f"Continuing past ValueError for {subject} ... ")
             continue
+
+    # print(out_sub)
 
     save_glm_to_bids(
         m,

@@ -30,8 +30,8 @@ parser.add_argument("--collapse_tasks", action="store_true",
                     help="Combine all tasks into one?")
 
 parser.add_argument("--list_of_subs", "-s", metavar="SUB", nargs="+",
-                        help="List of subjects to run all contrasts for. "
-                             "Format: LABEL SUB1 [SUB2 ...]")
+                    help="List of subjects to run all contrasts for. "
+                            "Format: LABEL SUB1 [SUB2 ...]")
 
 args = parser.parse_args()
 
@@ -79,9 +79,9 @@ def run_secondlevel(fixed_files, task, contrast, group=None):
         slm,
         contrasts="Intercept",
         contrast_types={"Intercept": "t"},
-        out_dir=f"{results_dir}",
+        out_dir=results_dir,
         prefix=f"task-{task}_contrast-{contrast}{group_str}",
-     )
+    )
 
 # Main loop =====
 
@@ -114,7 +114,9 @@ else:
 
         for con in contrasts:
 
-            effect_maps_glob = f"**/sub-*_task-{task}_contrast-{con}_stat-effect_statmap.nii.gz"
+            effect_maps_glob = f"**/sub-*_task-{task}_contrast-{con}" + \
+                "_stat-effect_statmap.nii.gz"
+
             fixed_files = list(results_path.glob(effect_maps_glob))
             fixed_files.sort()
 
@@ -134,7 +136,7 @@ else:
                 print(f"Reduced list of files from {n_orig} to "
                       f"{len(fixed_files)}")
 
-            pp.pprint(fixed_files)
+            # pp.pprint(fixed_files)
 
             run_secondlevel(fixed_files=fixed_files, task=task, contrast=con,
                             group=group_label)
