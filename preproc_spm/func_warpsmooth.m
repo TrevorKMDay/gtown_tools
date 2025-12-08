@@ -2,21 +2,28 @@
 function func_warpsmooth(home, sub, func, warptype, smoothing)
 
 % maxNumCompThreads(1) ;
+addpath('~/Documents/MATLAB/spm12') ;
 
+disp(strcat("Starting func_warpsmooth for ", sub, " in ", home, ...
+    " using smoothing=", smoothing)) ;
 
 % SPMwarp, SPMCFMwarp, ANTSwarp (for warps whose folders are named that
 % way), 'useThis' or some other label marking the folders with the best
 % warps if not named consistently
 
-% Default values (no way to set) warptype = 'SPMwarp_lessRegularized';
+% Default values (no way to set) 
+% warptype = 'SPMwarp_lessRegularized';
 % smoothat = 6;
 
 smoothat = str2double(smoothing);
 
-processed = strcat(home, "/sub-", sub);
+% processed = strcat(home, "/sub-", sub);
+sub_anat =  strcat(home, "/sub-", sub, "/anat/") ;
 
 % First, find the warp field
-warpfield = strcat(processed, "/anat/y_sub-", sub, "_T1w.nii") ;
+% warpfield = strcat(processed, "/anat/y_sub-", sub, "_T1w.nii") ;
+warpfield_info = dir(strcat(sub_anat, "y_sub-*_T1w.nii")) ;
+warpfield = strcat(warpfield_info.folder, "/", warpfield_info.name) 
 
 if ~exist(warpfield, 'file')
     disp('Cannot find the requested warpfield. Aborting.')
@@ -30,7 +37,7 @@ processed = strcat(home, "/sub-", sub, "/") ;
 func_dir = strcat(processed, "/func/", func);
 nii_names = struct2table(dir(strcat(func_dir, ...
     "/03_rmoco/rmoco_sub-*.nii"))).name;
-nii_files = cellstr(strcat(func_dir, "/03_rmoco/", nii_names))
+nii_files = cellstr(strcat(func_dir, "/03_rmoco/", nii_names)) ;
 
 clear matlabbatch
 

@@ -2,15 +2,22 @@
 
 % EDIT ME TO TAKE PATH TO ONE FUNC DIR
 
-% Parameter func: name of directory containing 01_orig/, 02_moco/, etc., e.g.:
-%   sub-01_task-line_run-1/. Do not include full path or trailing slash
+% Parameter func: name of directory containing 01_orig/, 02_moco/, etc., 
+%   e.g.: sub-01_task-line_run-1/. 
+% Do not include full path or trailing slash
 
 function func_coreg = func_coreg(home, sub, func)
 
 % maxNumCompThreads(1) ;
 addpath('~/Documents/MATLAB/spm12') ;
 
-ref_T1w = strcat(home, "/sub-", sub, "/anat/sub-", sub, "_T1w.nii");
+disp(strcat("Starting func_coreg for ", sub, " in ", home)) ;
+
+% ref_T1w = strcat(home, "/sub-", sub, "/anat/sub-", sub, "_T1w.nii");
+sub_anat =  strcat(home, "/sub-", sub, "/anat/") ;
+
+ref_T1w_info = dir(strcat(sub_anat, "sub-*_T1w.nii")) ;
+ref_T1w = strcat(ref_T1w_info.folder, "/", ref_T1w_info.name) 
 
 if ~exist(ref_T1w, 'file')
     disp('T1 not found. Aborting.')
@@ -21,10 +28,10 @@ end
 % Identify the files in the given <sub>/func/<func>/01_orig directory:
 processed = strcat(home, "/sub-", sub, "/");
 func_dir = strcat(processed, "/func/", func);
-nii_names = struct2table(dir(strcat(func_dir, "/01_orig/sub-*.nii"))).name;
-nii_files = cellstr(strcat(func_dir, "/01_orig/", nii_names));
+nii_names = struct2table(dir(strcat(func_dir, "/01_orig/sub-*.nii"))).name ;
+nii_files = cellstr(strcat(func_dir, "/01_orig/", nii_names)) ;
 
-disp(nii_files) ;
+% disp(nii_files) ;
 
 if height(nii_files) == 0
     disp("No .nii files found!")

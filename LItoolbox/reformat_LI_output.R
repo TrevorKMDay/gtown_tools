@@ -8,10 +8,15 @@ stopifnot(length(inputs) > 0)
 
 extract_fields <- function(filenames) {
 
-  fields <- str_extract_all(filenames, "[^_]*-", simplify = TRUE) %>%
+  filenames <- sapply(filenames, function(x) str_split_1(x, " ")[1])
+
+  fields <- str_extract_all(filenames, "[^_]+-[^_]+", simplify = TRUE) %>%
+    str_remove("-[^_]+$") %>%
     as.vector() %>%
-    unique() %>%
-    str_remove("-$")
+    unique()
+
+  # Remove empty string from list
+  fields <- fields[!(fields %in% c(""))]
 
   n_fields <- length(fields)
 
@@ -21,7 +26,7 @@ extract_fields <- function(filenames) {
 
 }
 
-rewrite <- function(data0, fields = NA) {
+rewrite <- function(data0, fname, fields = NA) {
 
   # message(input)
   # data0 <- read_delim(input, "\t", show_col_types = FALSE)
@@ -66,7 +71,7 @@ rewrite <- function(data0, fields = NA) {
   result <- bind_rows(new_data, errors) %>%
     arrange(input_image)
 
-  if (!is.na(fields)) {
+  if (length(fields) > 1 & !all(is.na(fields))) {
 
     message("Extracting fields from input_image")
 
@@ -84,20 +89,22 @@ rewrite <- function(data0, fields = NA) {
 
   }
 
-  output_file <- str_replace(input, ".tsv", "-reformatted.csv")
-  message(output_file)
+  output_file <- str_replace(fname, ".tsv", "-reformatted.csv")
+  message(paste("Writing to", output_file))
 
-  stopifnot(input != output_file)
+  stopifnot(fname != output_file)
 
-  write_csv(new_data, output_file)
+  write_csv(result, output_file)
 
 }
 
 for (i in inputs) {
 
-  tsv <- read_tsv(input, show_col_types = FALSE)
+  tsv <- read_tsv(i, show_col_types = FALSE)
   fields <- extract_fields(tsv$`Input image`)
 
-  rewrite(tsv, fields)
+  # print(tsv$`Input image`)
+
+  rewrite(data0 = tsv, fname = i, fields = fields)
 
 }

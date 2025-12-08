@@ -3,14 +3,17 @@
 home=~/code/LItoolbox/
 export MATLABPATH=${home}
 
+
 force="false"
-while getopts "f:" flag; do
- case $flag in
-   f) force="true" ; shift ;;
-   \?)
-   # Handle invalid options
-   ;;
- esac
+while getopts "h:f:s:" flag; do
+    case ${flag} in
+        h) home=${OPTARG} ; shift ;;
+        s) spm=${OPTARG}  ; shift ;;
+        f) force="true"   ; shift ;;
+        \?)
+        # Handle invalid options
+        ;;
+    esac
 done
 
 roi=${1} ; shift
@@ -18,15 +21,21 @@ thr1=${1} ; shift
 output_tsv=${1} ; shift
 files=${*}
 
-n_files=$(echo "${files}" | wc -w | tr -d '[:space:]')
+# spm=~/Documents/MATLAB/spm12/
 
+echo "${spm}"
+
+# Count the number of files
+n_files=$(echo "${files}" | wc -w | tr -d '[:space:]')
 echo "I was given ${n_files} files"
 
+# Can't do anything with no files
 if [ "${n_files}" -eq 0 ] ; then
     echo "Usage: ${0} roi thr1 output.tsv f1[, f2 ...]"
     exit 1
 fi
 
+# Don't run LI if the output already exists
 if [ -e "${output_tsv}" ] ; then
 
     echo "Output file ${output_tsv} already exists, not overwriting!"
@@ -34,9 +43,15 @@ if [ -e "${output_tsv}" ] ; then
 
 fi
 
-echo "Starting value check ..."
+if [ ! -e "${roi}" ] ; then
+    echo "Can't find ROI file: ${roi}"
+    exit 1
+fi
 
 if [[ ${force} == "false" ]] ; then
+
+    # Check that the ROI is the same dimensions as the input data
+    echo "Starting value check ..."
 
     for f in ${files} ; do
 
@@ -60,9 +75,15 @@ if [[ ${force} == "false" ]] ; then
 
     done
 
+    echo "Finished with value check"
+
+else
+
+    echo "Skipping value check"
+
 fi
 
-echo "Finished"
+# Actually invoke MATLAB
 
 # shellcheck disable=SC2086
 matlab -batch "call_LI('${files}', '${roi}', '${thr1}', '${output_tsv}')"

@@ -15,10 +15,10 @@ parser = ap.ArgumentParser()
 
 input_args = parser.add_mutually_exclusive_group(required=True)
 
-parser.add_argument("--list_of_files", "-f", metavar="FILE", nargs='+',
-                    help="List of fixed-effect files to use "
-                         "('stat-effect_statmap'). "
-                         "Sets task label to 'task-all'.")
+input_args.add_argument("--list_of_files", "-f", metavar="FILE", nargs='+',
+                        help="List of fixed-effect files to use "
+                        "('stat-effect_statmap'). "
+                        "Sets task label to 'task-all'.")
 
 input_args.add_argument("--results_dir", "-d", type=str, metavar="DIR",
                         help="Directory with fixed-effects (first-level) "
@@ -33,6 +33,10 @@ parser.add_argument("--list_of_subs", "-s", metavar="SUB", nargs="+",
                     help="List of subjects to run all contrasts for. "
                             "Format: LABEL SUB1 [SUB2 ...]")
 
+parser.add_argument("--output_dir", "-o", metavar="DIR",
+                    help="Where to save the resulting files to. "
+                         "Default: results_dir")
+
 args = parser.parse_args()
 
 if args.list_of_subs is not None:
@@ -42,6 +46,8 @@ if args.list_of_subs is not None:
 else:
     group_label = None
     subs  = None
+
+output_dir = args.results_dir if args.output_dir is None else args.output_dir
 
 # Check input arguments ====
 
@@ -79,7 +85,7 @@ def run_secondlevel(fixed_files, task, contrast, group=None):
         slm,
         contrasts="Intercept",
         contrast_types={"Intercept": "t"},
-        out_dir=results_dir,
+        out_dir=output_dir,
         prefix=f"task-{task}_contrast-{contrast}{group_str}",
     )
 

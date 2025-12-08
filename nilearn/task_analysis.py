@@ -103,7 +103,7 @@ model_settings.add_argument("--hrf_deriv", action="store_true",
 model_settings.add_argument("--hrf_disp", action="store_true",
                             help="Add dispersion parameter to HRF model.")
 
-model_settings.add_argument("-smooth_fwhm",
+model_settings.add_argument("--smooth_fwhm", default=5,
                             help="Smoothing kernel (mm)")
 
 model_settings.add_argument("--strategy", nargs='*',
@@ -256,6 +256,7 @@ print()
 
 settings = {}
 
+settings["smooth"] = float(args.smooth_fwhm)
 settings["space"] = space_label
 
 settings["hrf"] = "spm" if args.hrf == "spm" else "glover"
@@ -516,14 +517,15 @@ else:
     derivatives_folder=derivatives_folder,
     img_filters=img_filter_list,
 
-    smoothing_fwhm=5.0,
+    smoothing_fwhm=settings["smooth"],
     drift_model=None,
 
     # Add more things to regression strategy
-    # Set motion threshold to 0.5 mm for task
     confounds_strategy=settings["confounds_strategy"],
     confounds_motion=settings["confounds_motion"],
     confounds_fd_threshold=settings["confounds_fd_threshold"],
+    confounds_scrub=5,
+    confounds_std_dvars_threshold=None,
 
     # Running settings
     verbose=3,

@@ -13,7 +13,7 @@ mkdir -p "${for_li}"/
 echo "Setting up files ..."
 
 files=$(find "${input}" \
-            -name "sub-*_task-${task}_contrast-*_stat-t_statmap.nii.gz" \
+            -name "*task-${task}*_stat-t_statmap.nii.gz" \
             -exec readlink -f {} \;)
 n_files=$(echo "${files}" | wc -w)
 
@@ -33,7 +33,7 @@ done
 
 # Exclude files already in SPM space
 input_files=$(find "${for_li}/" \
-                    -name "sub-*_task-${task}_contrast-*.nii.gz" | \
+                    -name "*task-${task}_contrast-*.nii.gz" | \
                 sort)
 
 #shellcheck disable=SC2086
@@ -42,7 +42,7 @@ input_files=$(find "${for_li}/" \
     ${input_files}
 
 spm_files=$(find "${for_li}/" \
-                    -name "sub-*_task-${task}_space-SPM_contrast-*.nii.gz" | \
+                    -name "*task-${task}_space-SPM_contrast-*.nii.gz" | \
                 sort)
 
 for f in ${spm_files} ; do
@@ -50,7 +50,7 @@ for f in ${spm_files} ; do
     ungzed=${f//.gz/}
 
     if [ ! -e "${ungzed}" ] || [ "${ungzed}" -ot "${f}" ] ; then
-        gunzip -k "${f}"
+        yes n | gunzip -k "${f}"
     fi
 
 done

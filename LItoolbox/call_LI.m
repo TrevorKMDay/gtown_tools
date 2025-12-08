@@ -15,8 +15,10 @@ files_split = split(files) ;
 files_split(cellfun("isempty", files_split)) = [];
 files_split_char = char(files_split) ;
 
+disp(files_split_char)
+
 n_files = size(files_split_char) ;
-disp(strcat("[call_LI] I was given ", string(n_files), " files."))
+disp(strcat("[call_LI] I was given ", string(n_files(1)), " files."))
 
 % overwrite = 0     don't do anything if output file exists
 %           = 1     delete output file and start over
@@ -37,14 +39,15 @@ elseif exist(output_file, "file") && overwrite == 2
 end
 
 % add libraries
+disp(strcat("[call_LI] SPM: ", spm))
 addpath(spm);
-addpath(spm + '/toolbox/LI');
+addpath(strcat(spm, '/toolbox/LI'));
 
-disp(strcat("[call_LI] Using ROI: ", roi))
+disp(strcat("[call_LI] ROI: ", roi))
 
 % Thresholding ====
-% thr1    = 1 (use same threshold for all images)
-%         = 0 (individual thresholding for all images)
+% thr1    =  1 (use same threshold for all images)
+%         =  0 (individual thresholding for all images)
 %         = -1 (adaptive thresholding
 %         = -2 (rank-based thresholding)
 %         = -3 (iterative thresholding, LI-curves)
@@ -55,6 +58,7 @@ disp(strcat("[call_LI] Using threshold setting: ", thr1))
 
 % B1 = the ROI
 % C1 = exclusive mask [1: midline 5mm]
+
 li_input = struct("A", files_split_char, ...
                     "B1", roi, ...
                     "C1", 1, ...

@@ -6,9 +6,11 @@ analysis_dir=$(readlink -f "${1}")
 task=${2}
 spm_path=${3}
 spm_scripts_path=${4}
+
+# Contrasts should only include non >Rest contrasts
 contrasts=${5}
 
-echo 
+echo
 echo -n "Identifying subs from ${analysis_dir} ..."
 subs=$(find "${analysis_dir}" -maxdepth 1 -name "sub-*" -type d \
             -exec basename {} \; | \
@@ -25,35 +27,36 @@ echo "Starting 1st level"
 # Add scripts to path
 export MATLABPATH=${spm_scripts_path}
 
-for sub in ${subs} ; do 
+for sub in ${subs} ; do
 
     echo "${sub}"
 
     dirs=$(find "${analysis_dir}/sub-${sub}/func/" -maxdepth 1 -type d \
             -name "sub-${sub}_${task}_*")
 
-    if [ "$(echo "${dirs}" | wc -w)" -eq 0 ] ; then 
+    if [ "$(echo "${dirs}" | wc -w)" -eq 0 ] ; then
         echo "    No ${task} dirs found, skipping"
         continue
-    else 
+    else
         echo "    Found ${task} dirs:"
-        for d in ${dirs} ; do 
+        for d in ${dirs} ; do
             echo "        ${d}"
-        done  
+        done
     fi
 
-    for rdir in ${dirs} ; do 
+    for rdir in ${dirs} ; do
 
-        # Try resetting the MATLAB cache each time to avoid the seg fault 
+        # Try resetting the MATLAB cache each time to avoid the seg fault
         MCR_CACHE_ROOT=$(mktemp -d /tmp/mcr.XXXXXX)
         export MCR_CACHE_ROOT
 
         echo "    ${rdir}"
         bn_rdir="$(basename "${rdir}")"
 
-        motion_file=${rdir}_rp.txt
+        # Find the
+        motion_file=$(find ${rdir}/01_orig/ -name "rp_*.txt")
 
-        # Replace suffix and remove space label; it's not included in the 
+        # Replace suffix and remove space label; it's not included in the
         #   events.tsv file name
         events_file=$(echo "${rdir}" | \
                         sed -e 's/_bold//'          \
@@ -63,24 +66,34 @@ for sub in ${subs} ; do
         # Add suffix if not present
         [[ ${events_file} == *+_events.tsv ]] || events_file+=_events.tsv
 
-        if [ ! -f "${events_file}" ] ; then 
+        if [ ! -f "${events_file}" ] ; then
             echo "Can't find missing events file: ${events_file}"
             echo "Fix and proceed."
             break 2
         fi
 
-        tr=$(fslval "${rdir}"/*_0000.nii pixdim4)
-        echo "        Found TR: ${tr}"
+        # Get TR from the first file in the input; if there's a problem,
+        # skip this subject
+        ws00=$(find "${rdir}"/05_warpsmooth/ -name "*_0000.nii")
+        tr=$(fslval "${ws00}"  pixdim4)
+        if [ -z ${tr} ] ; then
+            echo -n "        Problem getting TR from ${ws00}, skipping this "
+            echo    "subject."
+            break 2
+        else
+            echo "        Found TR: ${tr} (file: ${ws00})"
+        fi
 
-        if [ ! -e "${rdir}/results/SPM.mat" ] ; then 
+        firstlevel_mat=${rdir}/05_warpsmooth/results/SPM.mat
+        if [ ! -e "${firstlevel_mat}" ] ; then
 
             matlab \
-                -batch "func_1stlevel('${spm_path}', '${analysis_dir}', \
-                            '${sub}', '${bn_rdir}', \
+                -batch "func_1stlevel('${analysis_dir}', \
+                            '${sub}', '${bn_rdir}/05_warpsmooth', \
                             0, '${tr}', '${contrasts}', \
                             '${events_file}', '${motion_file}')"
 
-        else 
+        else
 
             echo "    Skipping 1st level, already done"
 
@@ -91,10 +104,9 @@ for sub in ${subs} ; do
         # rp file must match 'rp_.*.txt'
         cp "${motion_file}" "${rdir}"/rp__.txt
 
-        firstlevel_mat=${rdir}/results/SPM.mat
-        optcens_mat=${rdir}/results/optcens/optcens.mat
+        optcens_mat=${rdir}/05_warpsmooth/results/optcens/optcens.mat
 
-        if [ ! -e "${optcens_mat}" ] ; then 
+        if [ ! -e "${optcens_mat}" ] ; then
 
             matlab \
                 -nodisplay -nosplash \

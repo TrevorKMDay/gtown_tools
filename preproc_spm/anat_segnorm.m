@@ -7,47 +7,61 @@
 
 % SETUP
 
-function anat_segnorm = anat_segnorm(home, sub, output) 
+function anat_segnorm = anat_segnorm(src_t1) 
 
     maxNumCompThreads(1) ;
     
     addpath('~/Documents/MATLAB/spm12') ;
     
-    % home = '/Volumes/TrevorDay/Projects/LBS/ferrara_lbs';
-    bids = strcat(home, '/bids/') ;
-    
-    %% prep the output folder
-    outputdir = strcat(output, "/sub-", sub, "/anat/") ;
-    mkdir(outputdir);
-    
-    % base T1 for processing
-    src_t1 = strcat(outputdir, 'sub-', sub, '_T1w.nii') ;
+    % % home = '/Volumes/TrevorDay/Projects/LBS/ferrara_lbs';
+    % % bids = strcat(home, '/bids/') ;
+    % 
+    % %% prep the output folder
+    % outputdir = strcat(output, "/sub-", sub, "/anat/") ;
+    % mkdir(outputdir);
+    % 
+    % % base T1 for processing
+    % src_t1 = strcat(outputdir, 'sub-', sub, '_T1w.nii') ;
+    % 
+    % if ~isfile(src_t1)
+    % 
+    %     % Read in the t1
+    %     t1_file = strcat(bids, '/sub-', sub, '/anat/', 'sub-', sub, ...
+    %         '_T1w.nii.gz') ;
+    % 
+    %     rawt1 = niftiread(t1_file);
+    %     rawt1_hdr = niftiinfo(t1_file);
+    % 
+    % 
+    %     % write a copy of this t1 to the new folder
+    %     % QUESTION: Why not compress?
+    %     niftiwrite(rawt1, src_t1, rawt1_hdr, 'Compressed', false);
+    % 
+    % else
+    % 
+    % 
+    %     disp("Skip T1 copy")
+    % 
+    % end
 
-    if ~isfile(src_t1)
+    % disp(src_t1)
+    [outputdir, basename, ext] = fileparts(src_t1) ;
+    sub = erase(regexp(basename, "sub-[^_.]*", 'match'), 'sub-')
 
-        % Read in the t1
-        t1_file = strcat(bids, '/sub-', sub, '/anat/', 'sub-', sub, ...
-            '_T1w.nii.gz') ;
-        
-        rawt1 = niftiread(t1_file);
-        rawt1_hdr = niftiinfo(t1_file);
-        
-        
-        % write a copy of this t1 to the new folder
-        % QUESTION: Why not compress?
-        niftiwrite(rawt1, src_t1, rawt1_hdr, 'Compressed', false);
-
-    else
-        
-
-        disp("Skip T1 copy")
-
+    % Check that input is uncompressed nifti
+    if ext ~= ".nii"
+        disp('Input T1 must have .nii extension')
+        return
     end
-    
+
+    % Change tehse so they can be red properly
+    outputdir = strcat(outputdir, "/") ;
+    basename = strcat(basename, ext) ;
+
     %% START PROCESSING
 
     % If tissue seg outputs don't exist, create them 
-    if ~isfile(strcat(outputdir, "c6sub-", sub, "_T1w.nii"))
+    if ~isfile(strcat(outputdir, "c6", basename))
     
         disp('Starting the seg/norm estimation in SPM12...')
         clear matlabbatch;
@@ -129,30 +143,18 @@ function anat_segnorm = anat_segnorm(home, sub, output)
 
     end
 
-
     %% Produce warped outputs for 
     stripped_t1_file = fullfile(outputdir, ...
-        strcat('sub-', sub, '_stripped_t1.nii'));
+        strcat('sub-', sub, '_stripped_t1.nii')) ;
     smoothed_brainmask_file = fullfile(outputdir, ...
-        strcat('sub-', sub, '_brain_mask_blur2.nii'));
+        strcat('sub-', sub, '_brain_mask_blur2.nii')) ;
 
-    c1t1_file = fullfile(outputdir, ...
-        strcat('c1', 'sub-', sub, '_T1w.nii'));
-
-    c2t1_file = fullfile(outputdir, ...
-        strcat('c2', 'sub-', sub, '_T1w.nii'));
-
-    c3t1_file = fullfile(outputdir, ...
-        strcat('c3', 'sub-', sub, '_T1w.nii'));
-
-    c4t1_file = fullfile(outputdir, ...
-        strcat('c4', 'sub-', sub, '_T1w.nii'));
-
-    c5t1_file = fullfile(outputdir, ...
-        strcat('c5', 'sub-', sub, '_T1w.nii'));
-
-    c6t1_file = fullfile(outputdir, ...
-        strcat('c6', 'sub-', sub, '_T1w.nii'));
+    c1t1_file = fullfile(outputdir, strcat('c1', basename));
+    c2t1_file = fullfile(outputdir, strcat('c2', basename));
+    c3t1_file = fullfile(outputdir, strcat('c3', basename));
+    c4t1_file = fullfile(outputdir, strcat('c4', basename));
+    c5t1_file = fullfile(outputdir, strcat('c5', basename));
+    c6t1_file = fullfile(outputdir, strcat('c6', basename));
 
     if ~isfile(stripped_t1_file) || ~isfile(smoothed_brainmask_file)
     
@@ -165,7 +167,7 @@ function anat_segnorm = anat_segnorm(home, sub, output)
         %[hdr,img]=read_nifti(t1_file); % read in anatomical
         hdr = niftiinfo(src_t1);
         img = niftiread(src_t1);
-        
+
         c1img=niftiread(c1t1_file);
         c2img=niftiread(c2t1_file);
         
@@ -196,8 +198,7 @@ function anat_segnorm = anat_segnorm(home, sub, output)
     end
     
     % using this deformation field
-    deffield_file = fullfile(outputdir, ...
-        strcat('y_sub-', sub, '_T1w.nii')); 
+    deffield_file = fullfile(outputdir, strcat('y_', basename)); 
     
     % Warp c1 (gm) and c2 (wm)
     for i = [src_t1 stripped_t1_file smoothed_brainmask_file ...
@@ -206,7 +207,9 @@ function anat_segnorm = anat_segnorm(home, sub, output)
         % I had to move this into a loop; not sure why, I couldn't figure
         % out how to put multiple images into subj.resample
 
-        warped_i = strcat("w", i);
+        [i_dir, i_fn, i_sfx] = fileparts(i) ;
+        warped_i = strcat(i_dir, "/w", i_fn, i_sfx);
+        % disp(warped_i)
 
         if ~isfile(warped_i)
 

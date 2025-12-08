@@ -4,12 +4,15 @@ function func_1stlevel_postOCT = func_1stlevel_postOCT(dirs, TR, ...
 % Trevor refactor:
 addpath('~/Documents/MATLAB/spm12') ;
 
-dirs_to_combine = strsplit(dirs, " ") ;
+% dirs='first_level_fwhm6/sub-kLat003/func/sub-kLat003_task-ADDT_run-1_space-MNI_desc-smoothedmasked first_level_fwhm6/sub-kLat003/func/sub-kLat003_task-ADDT_run-2_space-MNI_desc-smoothedmasked'
+
+disp("dirs:")
+dirs_to_combine = strsplit(dirs, " ")
 
 % High pass filter cutoff in seconds.
 hpf_cutoff = 400;
 
-% Takes a space-separated list of directories to combine, and pulls out 
+% Takes a space-separated list of directories to combine, and pulls out
 % the input data (05_warpsmooth) and OCT info.
 
 TR = str2double(TR) ;
@@ -39,12 +42,12 @@ for i = 1:n_runs
     % Get number of conditions
     n_conditions = size(data.spm_mat{i}.SPM.Sess.U, 2) ;
 
-    % Extract the motion columns 
+    % Extract the motion columns
     % Columns are:
     %   regressors, 6 RP, censoring, constant
     %   In all cases, ignore the constant
 
-    % Get the dimensions 
+    % Get the dimensions
     des_mat_size = size(data.des_mat{i}) ;
     dm_ncols = des_mat_size(2) ;
     dm_last_col = dm_ncols - 1 ;
@@ -52,7 +55,7 @@ for i = 1:n_runs
     disp(strcat("Starting with size: ", num2str(des_mat_size(1)), ", ", ...
         num2str(des_mat_size(2))))
 
-    if regs == "rp" 
+    if regs == "rp"
         % Only use the 6 motion parameters
         cols_to_keep = (n_conditions + 1):(n_conditions + 6);
     elseif regs == "rp+cens"
@@ -60,7 +63,7 @@ for i = 1:n_runs
     elseif regs == "cens"
         % Skip over the 6 rp columns
         cols_to_keep = (n_conditions + 1 + 6):dm_last_col ;
-    else 
+    else
         disp(strcat("Illegal parameter: ", regs))
     end
 
@@ -79,7 +82,7 @@ for i = 1:n_runs
 
 end
 
-% return 
+% return
 
 % Create new output folder
 mkdir(output_dir);
@@ -97,7 +100,7 @@ matlabbatch{1}.spm.stats.fmri_spec.timing.RT = TR;
 matlabbatch{1}.spm.stats.fmri_spec.timing.fmri_t = 16;
 matlabbatch{1}.spm.stats.fmri_spec.timing.fmri_t0 = 8;
 
-% We are going to assume the number of conditions is the same for both 
+% We are going to assume the number of conditions is the same for both
 % runs. If it's not, something's gone very wrong
 
 for i = 1:n_runs
@@ -160,10 +163,10 @@ matlabbatch{2}.spm.stats.fmri_est.method.Classical = 1;
 %% Contrasts
 matlabbatch{3}.spm.stats.con.spmmat(1) = ...
     cfg_dep('Model estimation: SPM.mat File', ...
-            substruct('.','val', '{}',{2}, '.','val', '{}', {1}, ...
-                        '.','val', '{}',{1}), substruct('.','spmmat'));
+    substruct('.','val', '{}',{2}, '.','val', '{}', {1}, ...
+    '.','val', '{}',{1}), substruct('.','spmmat'));
 
-% Contrasts info should be identical between the two runs, so use the 
+% Contrasts info should be identical between the two runs, so use the
 % first one
 contrasts_info = data.spm_mat{1}.SPM.xCon;
 n_contrasts = size(contrasts_info, 2);
@@ -174,9 +177,9 @@ for i = 1:n_contrasts
     name_raw = contrasts_info(i).name;
     name = regexprep(name_raw, " - .*", "");
 
-    % Extract weights from struct based on the known number of 
+    % Extract weights from struct based on the known number of
     % conditions
-    w1 = contrasts_info(i).c(1:n_conditions); 
+    w1 = contrasts_info(i).c(1:n_conditions);
     weights = transpose(w1) ;
 
     matlabbatch{3}.spm.stats.con.consess{i}.tcon.name = name;

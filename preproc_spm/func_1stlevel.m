@@ -1,11 +1,11 @@
 % This function registers the functionals to native space
 
-function func_1stlevel = func_1stlevel(spm_path, home, sub, rundir, ...
+function func_1stlevel = func_1stlevel(home, sub, rundir, ...
                                         expected_vols, TR, contrasts, ...
                                         events_tsv, moco_file)
 
 % Add SPM library to path
-addpath(spm_path) ;
+addpath('~/Documents/MATLAB/spm12') ;
 
 % Setup structure
 proc_dir = strcat(home, "/sub-", sub, "/func/", rundir) ;
@@ -30,29 +30,29 @@ elseif isempty(nii_files)
     % Finding 0 files, even if expected # is 0 is still wrong.
     disp("Didn't verify # of files, but found 0. Exiting!")
     exit()
-else 
+else
     disp("Not verifying input # of files, found: ")
     disp(length(nii_files))
 end
 
-% High pass filter cutoff in seconds. 
-% If you set it to run_duration (in seconds), it will include a half 
-% cosine and a full cosine over the course of the run, 
-% removing linear and quadratic trends in the data. If you set it 
-% higher, only linear trends will be removed (unless you set it higher 
-% than 2*run_duration, in which case there will be no filtering at 
-% all). If you set it to a smaller number, cosines with faster 
-% frequency will be included. 
-% Make sure not to get into the frequency range of your experimental 
-% manipulation! 
-run_duration = length(nii_files) * str2double(TR) ; 
+% High pass filter cutoff in seconds.
+% If you set it to run_duration (in seconds), it will include a half
+% cosine and a full cosine over the course of the run,
+% removing linear and quadratic trends in the data. If you set it
+% higher, only linear trends will be removed (unless you set it higher
+% than 2*run_duration, in which case there will be no filtering at
+% all). If you set it to a smaller number, cosines with faster
+% frequency will be included.
+% Make sure not to get into the frequency range of your experimental
+% manipulation!
+run_duration = length(nii_files) * str2double(TR) ;
 hpf_cutoff = run_duration ;
 disp(strcat("Using HPF cutoff: ", num2str(hpf_cutoff)))
 
 % Calculate onsets
 
 % events_tsv = strcat(home, "/sub-", sub, "/func/", ...
-%                     strrep(rundir, "_bold", "_events.tsv")) 
+%                     strrep(rundir, "_bold", "_events.tsv"))
 
 if ~isfile(events_tsv)
     error(strcat("No events file: ", events_tsv))
@@ -78,10 +78,10 @@ TR = str2double(TR) ;
 % [trial_types1, ~] = strsplit(contrasts, {' ', '>'}, ...
 %     "CollapseDelimiters", true) ;
 
-% trial_types = unique(trial_types1) 
+% trial_types = unique(trial_types1)
 contrasts = strsplit(contrasts, ' ')
 
-disp(events_table) 
+disp(events_table)
 disp(trial_types)
 
 % create new struct: name/onsets/duration (1 dur value)
@@ -121,7 +121,7 @@ disp("Configuring SPM ...")
 spm('defaults', 'fmri');
 spm_jobman('initcfg');
 
-% M-code from SPM (replace file/folder references with variables 
+% M-code from SPM (replace file/folder references with variables
 % as necessary)
 
 % Model specification
@@ -137,7 +137,7 @@ nii_files = cellstr(strcat(proc_dir, "/", nii_names)) ;
 
 matlabbatch{1}.spm.stats.fmri_spec.sess(1).scans = nii_files;
 
-for i = 1:length(conditions.names) 
+for i = 1:length(conditions.names)
 
     matlabbatch{1}.spm.stats.fmri_spec.sess(1).cond(i).name = ...
         conditions.names{i};
@@ -155,7 +155,7 @@ end
 % Continue setting up matlabbatch
 % IDK if this has to come after the constrasts, but it did originally
 matlabbatch{1}.spm.stats.fmri_spec.sess(1).multi = cellstr('');
-matlabbatch{1}.spm.stats.fmri_spec.sess(1).regress = ... 
+matlabbatch{1}.spm.stats.fmri_spec.sess(1).regress = ...
     struct('name', {}, 'val', {});
 matlabbatch{1}.spm.stats.fmri_spec.sess(1).multi_reg = ...
     {moco_file};
@@ -195,14 +195,14 @@ contrast_index = 1 ;
 for i = 1:length(trial_types)
 
     % Create the design matrix so that all conditions are set to 0
-    % except the one of interest 
+    % except the one of interest
     design = zeros(1, length(trial_types)) ;
     design(1, i) = 1 ;
     name = strcat(trial_types{i}, '>Rest') ;
 
     names(i) = name ;
 
-    disp(name) 
+    disp(name)
     disp(design)
 
     matlabbatch{3}.spm.stats.con.consess{contrast_index}.tcon.name = ...
@@ -216,7 +216,7 @@ for i = 1:length(trial_types)
 
 end
 
-for i = 1:length(contrasts) 
+for i = 1:length(contrasts)
 
     design = zeros(1, length(trial_types)) ;
 
@@ -226,7 +226,7 @@ for i = 1:length(contrasts)
     rhs = contrast(2) ;
 
     lhs_where = find(ismember(trial_types, lhs)) ;
-    rhs_where = find(ismember(trial_types, rhs)) ; 
+    rhs_where = find(ismember(trial_types, rhs)) ;
 
     design(lhs_where) = 1 ;
     design(rhs_where) = -1 ;
