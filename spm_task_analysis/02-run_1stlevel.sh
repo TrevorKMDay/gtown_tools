@@ -69,23 +69,25 @@ for sub in ${subs} ; do
         if [ ! -f "${events_file}" ] ; then
             echo "Can't find missing events file: ${events_file}"
             echo "Fix and proceed."
-            break 2
-        fi
-
-        # Get TR from the first file in the input; if there's a problem,
-        # skip this subject
-        ws00=$(find "${rdir}"/05_warpsmooth/ -name "*_0000.nii")
-        tr=$(fslval "${ws00}"  pixdim4)
-        if [ -z ${tr} ] ; then
-            echo -n "        Problem getting TR from ${ws00}, skipping this "
-            echo    "subject."
-            break 2
-        else
-            echo "        Found TR: ${tr} (file: ${ws00})"
+            continue 2
         fi
 
         firstlevel_mat=${rdir}/05_warpsmooth/results/SPM.mat
         if [ ! -e "${firstlevel_mat}" ] ; then
+
+            # Get TR from the first file in the input; if there's a problem,
+            # skip this subject
+            ws00=$(find "${rdir}"/05_warpsmooth/ -maxdepth 1 \
+                    -name "*_0000.nii")
+            echo ${ws00}
+            tr=$(fslval "${ws00}"  pixdim4)
+            if [ -z ${tr} ] ; then
+                echo -n "        Problem getting TR from ${ws00}, skipping "
+                echo    "this participant."
+                break 2
+            else
+                echo "        Found TR: ${tr} (file: ${ws00})"
+            fi
 
             matlab \
                 -batch "func_1stlevel('${analysis_dir}', \
@@ -102,7 +104,7 @@ for sub in ${subs} ; do
         # echo "PWD: $(pwd)"
 
         # rp file must match 'rp_.*.txt'
-        cp "${motion_file}" "${rdir}"/rp__.txt
+        rsync -u "${motion_file}" "${rdir}"/rp__.txt
 
         optcens_mat=${rdir}/05_warpsmooth/results/optcens/optcens.mat
 

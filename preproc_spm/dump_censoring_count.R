@@ -1,5 +1,4 @@
 library(tidyverse)
-library(hdf5r)
 
 # all_spmT_files <- list.files("/Volumes/thufir/kLat_SPM/",
 #                               pattern = "SPM.mat", recursive = TRUE,

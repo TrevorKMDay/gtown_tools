@@ -34,8 +34,7 @@ for i = 1:n_runs
 
     % Extract the design matrix
     data.des_mat{i} = data.spm_mat{i}.SPM.xX.X ;
-
-    head(data.des_mat{i})
+    % head(data.des_mat{i})
 
     %% Extract the nuisance regressors
 
