@@ -1,4 +1,5 @@
 library(tidyverse)
+library(R.matlab)
 
 # all_spmT_files <- list.files("/Volumes/thufir/kLat_SPM/",
 #                               pattern = "SPM.mat", recursive = TRUE,
@@ -6,36 +7,34 @@ library(tidyverse)
 #
 # optcens_spmT_files <- str_subset(all_spmT_files, "optcens/01_censored/")
 
-get_cens_frames <- function(SPM) {
-
-  xX_names <- unlist(SPM[[8]][[7]])
-  n_scan <- SPM[[3]][1, 1]
-
-  basis_functions <- str_detect(xX_names, "[*]bf")
-  rotations <- str_detect(xX_names, "R[1-6]$")
-
-  cols_to_keep <- !(basis_functions | rotations)
-  cols_to_keep[length(cols_to_keep)] <- FALSE
-
-  result <- tribble(
-    ~n_frames, ~n_cens,
-    n_scan, sum(cols_to_keep)
-  )
-
-  return(result)
-
-}
+source("~/code/preproc_spm/get_cens_frames.R")
 
 args <- commandArgs(trailingOnly = TRUE)
+# print(args)
 
-for (file in args) {
+if (length(args) > 0) {
 
-  result <- get_cens_frames(readMat(file)$SPM)
+  for (file in args) {
 
-  output_file <- str_replace(file, "SPM.mat", "cens_frames.csv")
+    output_file <- str_replace(file, "SPM.mat", "cens_frames.csv")
 
-  write_csv(result, output_file)
-  message(str_glue("Wrote {output_file}"))
+    # If output file doesn't exist, or is older than the file to extract
+    #   number of frames from, get the number of censored frames.
+    if (!file.exists(output_file) |
+        file.info(file)$mtime > file.info(output_file)$mtime) {
+
+      result <- get_cens_frames(readMat(file)$SPM)
+      write_csv(result, output_file)
+      message(str_glue("Wrote {output_file}"))
+
+    } else {
+
+      message(str_glue("{output_file} is newer than {file}, not rerunning ",
+                      "calculation."))
+
+    }
+
+  }
 
 }
 

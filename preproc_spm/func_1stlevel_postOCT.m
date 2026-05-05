@@ -1,5 +1,5 @@
 function func_1stlevel_postOCT = func_1stlevel_postOCT(dirs, TR, ...
-    regs, output_dir)
+    regs, output_dir, mthresh)
 
 % Trevor refactor:
 addpath('~/Documents/MATLAB/spm12') ;
@@ -148,7 +148,7 @@ matlabbatch{1}.spm.stats.fmri_spec.fact = ...
 matlabbatch{1}.spm.stats.fmri_spec.bases.hrf.derivs = [0 0];
 matlabbatch{1}.spm.stats.fmri_spec.volt = 1;
 matlabbatch{1}.spm.stats.fmri_spec.global = 'None';
-matlabbatch{1}.spm.stats.fmri_spec.mthresh = 0.8;
+matlabbatch{1}.spm.stats.fmri_spec.mthresh = str2double(mthresh);
 matlabbatch{1}.spm.stats.fmri_spec.mask = {''};
 matlabbatch{1}.spm.stats.fmri_spec.cvi = 'AR(1)';
 

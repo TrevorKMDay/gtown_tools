@@ -15,6 +15,8 @@ import nilearn as nil
 from nilearn.glm.first_level import first_level_from_bids
 from nilearn.interfaces.bids import save_glm_to_bids
 
+import nibabel as nib
+
 print(f"Using nilearn version: {nil.__version__}")
 
 def clean_contrast_name(contrast_name):
@@ -137,6 +139,11 @@ model_settings.add_argument("--fd", default=0.5, metavar="mm", type=float,
                             help="Framewise displacement threshold for scrub "
                                  "in mm. Default: 0.5")
 
+model_settings.add_argument("--no_func_mask", action="store_true",
+                            help="By default, the method calculates a mask"
+                                 "from the functional data, set this to use"
+                                 "the fMRIPREP-created mask")
+
 
 args = parser.parse_args()
 
@@ -164,6 +171,8 @@ out_dir = args.out_dir
 # HRF settings
 hrf_deriv = args.hrf_deriv
 hrf_disp = args.hrf_disp
+
+functional_masking = not args.no_func_mask
 
 if filter_file is not None:
 
@@ -501,6 +510,32 @@ else:
     print("\nUsing the following filters:")
     pp.pprint(img_filter_list)
 
+# Look for the mask files ===
+if not functional_masking:
+
+    # This is a list of lists: [subs [run masks]]
+    masks = [glob.glob(f"{derivatives_folder}/sub-{sub}/func/"
+                     f"sub-{sub}_task-{task_label}*{space_label}*"
+                     "desc-brain_mask.nii.gz")
+             for sub in sub_labels]
+
+    # For each set of masks, intersect them
+    # Defaults to threshold=0.5, which seems ok
+    intersected_at_sub = [nil.masking.intersect_masks(m) for m in masks]
+    intersected_at_all = nil.masking.intersect_masks(intersected_at_sub)
+
+    nib.save(intersected_at_all,
+             f"task-{task_label}_desc-intersected_mask.nii.gz")
+
+    mask_img = intersected_at_all
+
+    # pp.pprint(masks_intersected)
+
+else:
+    mask_img = None
+
+# quit()
+
 (
 
     models,
@@ -535,6 +570,8 @@ else:
     t_r=None,
     slice_time_ref=None,
     hrf_model = settings["hrf"],
+
+    mask_img=mask_img,
 
     # job control
     # n_jobs=-2

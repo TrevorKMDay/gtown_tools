@@ -25,7 +25,7 @@ option_list <- list(
   )
 
 args <- parse_args2(OptionParser(option_list = option_list))
-print(args)
+# print(args)
 
 all_only <- args$options$all_only
 keep_con_all <- args$options$keep_con_all

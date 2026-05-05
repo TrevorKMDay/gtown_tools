@@ -26,13 +26,10 @@ fi
 export MATLABPATH=~/code/preproc_spm/
 export OMP_NUM_THREADS=1
 
-if [ ! -d ${dest}/sub-${sub}/anat/ ] ; then
-    echo "The anatomical directory for ${dest}/sub-${sub} is missing!"
-    echo "Create that first"
-    exit 1
-fi
+mkdir -p "${dest}/sub-${sub}/func/"
 
-mkdir -p ${dest}/sub-${sub}/func/
+# Mar. 13, 2026: Had to tweak paths to ignore the new 'desc-orig' files
+#   for interpolation
 
 # First step is to unzip funcs for SPM
 
@@ -42,12 +39,15 @@ for t in ${tasks} ; do
 
     echo "Task: ${t}"
 
+    # shellcheck disable=SC2046
     rsync --update \
-        $(find ${bids}/sub-${sub}/func/ -name "*_task-${t}_*_bold.nii.gz") \
+        $(find "${bids}/sub-${sub}/func/" \
+                -name "*_task-${t}_run-[0-9]_bold.nii.gz") \
         "${dest}/sub-${sub}/func/"
 
     # Copy inherited events files
-    bolds=$(find "${bids}/sub-${sub}/func/" -name "*_task-${t}_*_bold.nii.gz" \
+    bolds=$(find "${bids}/sub-${sub}/func/" \
+                        -name "*_task-${t}_run-[0-9]_bold.nii.gz" \
                     -exec basename {} \; | \
                 sed 's/_bold.nii.gz//' | \
                 tr '\n' ' ')
@@ -58,6 +58,8 @@ for t in ${tasks} ; do
         rsync -u \
             "${bids}/sub-${sub}/func/${f}" \
             "${dest}/sub-${sub}/func/sub-${sub}_${f}"
+
+        # fslreorient2std "${dest}/sub-${sub}/func/sub-${sub}_${f}"
 
     done
 

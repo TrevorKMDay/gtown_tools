@@ -2,7 +2,9 @@
 
 function func_1stlevel = func_1stlevel(home, sub, rundir, ...
                                         expected_vols, TR, contrasts, ...
-                                        events_tsv, moco_file)
+                                        events_tsv, moco_file, mthresh)
+
+disp(strcat("Using mthresh: ", mthresh))
 
 % Add SPM library to path
 addpath('~/Documents/MATLAB/spm12') ;
@@ -166,7 +168,7 @@ matlabbatch{1}.spm.stats.fmri_spec.fact = ...
 matlabbatch{1}.spm.stats.fmri_spec.bases.hrf.derivs = [0 0];
 matlabbatch{1}.spm.stats.fmri_spec.volt = 1;
 matlabbatch{1}.spm.stats.fmri_spec.global = 'None';
-matlabbatch{1}.spm.stats.fmri_spec.mthresh = 0.8;
+matlabbatch{1}.spm.stats.fmri_spec.mthresh = str2double(mthresh);
 matlabbatch{1}.spm.stats.fmri_spec.mask = {''};
 matlabbatch{1}.spm.stats.fmri_spec.cvi = 'AR(1)';
 

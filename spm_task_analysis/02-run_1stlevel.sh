@@ -10,15 +10,32 @@ spm_scripts_path=${4}
 # Contrasts should only include non >Rest contrasts
 contrasts=${5}
 
-echo
-echo -n "Identifying subs from ${analysis_dir} ..."
-subs=$(find "${analysis_dir}" -maxdepth 1 -name "sub-*" -type d \
-            -exec basename {} \; | \
-        sed 's/sub-//' | \
-        sort)
-n_subs=$(echo "${subs}" | wc -w)
-echo " found ${n_subs}."
-echo
+# Set mthresh to 0 to do less aggressive masking for problem runs
+mthresh=${6}
+
+shift 6
+sub_input=${*}
+n_sub_input=$(echo "${sub_input}" | wc -w)
+
+if [ "${n_sub_input}" -eq 0 ] ; then
+
+    echo
+    echo -n "Identifying subs from ${analysis_dir} ..."
+    subs=$(find "${analysis_dir}" -maxdepth 1 -name "sub-*" -type d \
+                -exec basename {} \; | \
+            sed 's/sub-//' | \
+            sort)
+    n_subs=$(echo "${subs}" | wc -w)
+    echo " found ${n_subs}."
+    echo
+
+else
+
+    echo "Using ${n_sub_input} supplied subs"
+    echo "${sub_input}"
+    subs=${sub_input}
+
+fi
 
 # Invoking MATLAB
 
@@ -31,6 +48,18 @@ for sub in ${subs} ; do
 
     echo "${sub}"
 
+    # Check that there's an anatomical files to use, if not, skip this
+    #   participant
+    anat=$(find "${analysis_dir}/sub-${sub}/anat/" -name "wsub-*_T1w.nii")
+    if [ "$(echo "${anat}" | wc -w)" -eq 0 ] ; then
+        echo "    No anatomical file found, skipping"
+        continue
+    else
+        echo "    Found anat file: ${anat}"
+    fi
+
+    # Check that there's at least one func directory, if not, skip this
+    #   participant
     dirs=$(find "${analysis_dir}/sub-${sub}/func/" -maxdepth 1 -type d \
             -name "sub-${sub}_${task}_*")
 
@@ -54,7 +83,7 @@ for sub in ${subs} ; do
         bn_rdir="$(basename "${rdir}")"
 
         # Find the
-        motion_file=$(find ${rdir}/01_orig/ -name "rp_*.txt")
+        motion_file=$(find "${rdir}/01_orig/" -name "rp_*.txt")
 
         # Replace suffix and remove space label; it's not included in the
         #   events.tsv file name
@@ -79,21 +108,19 @@ for sub in ${subs} ; do
             # skip this subject
             ws00=$(find "${rdir}"/05_warpsmooth/ -maxdepth 1 \
                     -name "*_0000.nii")
-            echo ${ws00}
-            tr=$(fslval "${ws00}"  pixdim4)
-            if [ -z ${tr} ] ; then
-                echo -n "        Problem getting TR from ${ws00}, skipping "
-                echo    "this participant."
-                break 2
-            else
-                echo "        Found TR: ${tr} (file: ${ws00})"
+
+            if [[ "${ws00}" == "" ]] ; then
+                echo "        No warpsmooth files to work with, skipping"
+                break
             fi
+
+            tr=$(fslval "${ws00}" pixdim4)
 
             matlab \
                 -batch "func_1stlevel('${analysis_dir}', \
                             '${sub}', '${bn_rdir}/05_warpsmooth', \
                             0, '${tr}', '${contrasts}', \
-                            '${events_file}', '${motion_file}')"
+                            '${events_file}', '${motion_file}', '${mthresh}')"
 
         else
 

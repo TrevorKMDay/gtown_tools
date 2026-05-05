@@ -3,13 +3,19 @@
 home=~/code/LItoolbox/
 export MATLABPATH=${home}
 
-
+#defaults
 force="false"
-while getopts "h:f:s:" flag; do
+thresh="unset"
+
+while getopts "h:f:s:t:" flag; do
     case ${flag} in
-        h) home=${OPTARG} ; shift ;;
-        s) spm=${OPTARG}  ; shift ;;
+        # Make sure to shift 2 when OPTARG is assigned
+        h) home=${OPTARG} ; shift 2 ;;
+        s) spm=${OPTARG}  ; shift 2 ;;
         f) force="true"   ; shift ;;
+        # This is the same as 'thr3'
+        # This could be changed to allow multiple, but not right now
+        t) thresh=${OPTARG} ; shift 2 ;;
         \?)
         # Handle invalid options
         ;;
@@ -21,18 +27,29 @@ thr1=${1} ; shift
 output_tsv=${1} ; shift
 files=${*}
 
+if [ ! -d "$(dirname "${output_tsv}")" ] ; then
+
+    echo -n "Requested output driectory $(dirname "${output_tsv}") does not"
+    echo    "exist!"
+    exit 1
+
+fi
+
 # spm=~/Documents/MATLAB/spm12/
 
-echo "${spm}"
+# First, do some checks
 
-# Count the number of files
-n_files=$(echo "${files}" | wc -w | tr -d '[:space:]')
-echo "I was given ${n_files} files"
+if [ "${thr1}" == 1 ] ; then
+    echo "Using fixed thresholding."
 
-# Can't do anything with no files
-if [ "${n_files}" -eq 0 ] ; then
-    echo "Usage: ${0} roi thr1 output.tsv f1[, f2 ...]"
-    exit 1
+    if [ "${thresh}" == "unset" ] ; then
+        echo "... but the threshold (-t) wasn't set, dying"
+        exit 1
+    else
+        echo "... using threshold: ${thresh}"
+        thr1="1:${thresh}"
+    fi
+
 fi
 
 # Don't run LI if the output already exists
@@ -47,6 +64,21 @@ if [ ! -e "${roi}" ] ; then
     echo "Can't find ROI file: ${roi}"
     exit 1
 fi
+
+echo "${spm}"
+
+# Count the number of files only when we know we can start
+
+# Count the number of files
+n_files=$(echo "${files}" | wc -w | tr -d '[:space:]')
+echo "I was given ${n_files} files"
+
+# Can't do anything with no files
+if [ "${n_files}" -eq 0 ] ; then
+    echo "Usage: ${0} roi thr1 output.tsv f1[, f2 ...]"
+    exit 1
+fi
+
 
 if [[ ${force} == "false" ]] ; then
 

@@ -11,7 +11,7 @@ disp(strcat("Starting func_warpsmooth for ", sub, " in ", home, ...
 % way), 'useThis' or some other label marking the folders with the best
 % warps if not named consistently
 
-% Default values (no way to set) 
+% Default values (no way to set)
 % warptype = 'SPMwarp_lessRegularized';
 % smoothat = 6;
 
@@ -23,7 +23,7 @@ sub_anat =  strcat(home, "/sub-", sub, "/anat/") ;
 % First, find the warp field
 % warpfield = strcat(processed, "/anat/y_sub-", sub, "_T1w.nii") ;
 warpfield_info = dir(strcat(sub_anat, "y_sub-*_T1w.nii")) ;
-warpfield = strcat(warpfield_info.folder, "/", warpfield_info.name) 
+warpfield = strcat(warpfield_info.folder, "/", warpfield_info.name)
 
 if ~exist(warpfield, 'file')
     disp('Cannot find the requested warpfield. Aborting.')

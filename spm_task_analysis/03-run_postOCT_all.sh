@@ -18,23 +18,23 @@ export MATLABPATH=~/code/preproc_spm/
 # Find all the directories with the task in the name, then get the subject
 #   labels and get the unique subs
 
-subs=$(find ${home}/sub-*/func/ -maxdepth 1 -type d \
+subs=$(find "${home}"/sub-*/func/ -maxdepth 1 -type d \
             -name "sub-[^_]*_task-${task}_*" \
             -exec basename {} \; | \
         grep -o 'sub-[^_]*' | \
         sort -u)
 
-echo ${subs}
+echo "${subs}"
 
 for s in ${subs} ; do
 
-    dirs="$(find ${home}/${s}/func -maxdepth 1 -type d \
+    dirs="$(find "${home}/${s}/func" -maxdepth 1 -type d \
                 -name "${s}_task-${task}_*_desc-smoothedmasked" | \
             sort | \
             tr '\n' ' ' | \
             sed 's/ $//')"
 
-    echo $dirs
+    echo "${dirs}"
 
     odir=${home}/${s}/func/task-${task}_postOCT/
 
